@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -15,16 +16,16 @@ type DbConfig struct {
 }
 
 type Config struct {
-	DbConfig    DbConfig
-	Port        string
-	Protocol    string
-	secretKey   string
-	redisUri    string
-	rabbitMqUri string
-	smtpHost    string
-	smtpPort    int
-	smtpUser    string
-	smtpPass    string
+	DbConfig     DbConfig
+	Port         string
+	Protocol     string
+	secretKey    string
+	redisUri     string
+	smtpHost     string
+	smtpPort     int
+	smtpUser     string
+	smtpPass     string
+	kafkaBrokers []string
 }
 
 func LoadConfig() (*Config, error) {
@@ -43,15 +44,15 @@ func LoadConfig() (*Config, error) {
 			MongoDB:    os.Getenv("MONGO_DB"),
 			Collection: os.Getenv("MONGO_COLLECTION"),
 		},
-		Port:        os.Getenv("PORT"),
-		Protocol:    os.Getenv("PROTOCOL"),
-		secretKey:   os.Getenv("SECRET_KEY"),
-		redisUri:    os.Getenv("REDIS_URI"),
-		rabbitMqUri: os.Getenv("RABBITMQ_URI"),
-		smtpHost:    os.Getenv("SMTP_HOST"),
-		smtpUser:    os.Getenv("SMTP_USER"),
-		smtpPass:    os.Getenv("SMTP_PASS"),
-		smtpPort:    smtpPort,
+		Port:         os.Getenv("PORT"),
+		Protocol:     os.Getenv("PROTOCOL"),
+		secretKey:    os.Getenv("SECRET_KEY"),
+		redisUri:     os.Getenv("REDIS_URI"),
+		smtpHost:     os.Getenv("SMTP_HOST"),
+		smtpUser:     os.Getenv("SMTP_USER"),
+		smtpPass:     os.Getenv("SMTP_PASS"),
+		kafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
+		smtpPort:     smtpPort,
 	}, nil
 }
 
@@ -61,10 +62,6 @@ func (c *Config) GetSecretKey() string {
 
 func (c *Config) GetRedisURI() string {
 	return c.redisUri
-}
-
-func (c *Config) GetRabbitMqURI() string {
-	return c.rabbitMqUri
 }
 
 func (c *Config) GetSmptpPass() string {
@@ -81,4 +78,8 @@ func (c *Config) GetSmptpHost() string {
 
 func (c *Config) GetSmptpPort() int {
 	return c.smtpPort
+}
+
+func (c *Config) GetKafkaBrokers() []string {
+	return c.kafkaBrokers
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/ruziba3vich/hotello-users/genprotos/users"
+	"github.com/ruziba3vich/hotello-users/internal/pkg/config"
 )
 
 type (
@@ -23,6 +24,16 @@ func New(redisDb *redis.Client, logger *log.Logger) *RedisService {
 		logger:  logger,
 		redisDb: redisDb,
 	}
+}
+
+func NewRedisClient(cfg *config.Config) *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.GetRedisURI(),
+		Password: "",
+		DB:       0,
+	})
+
+	return rdb
 }
 
 func (r *RedisService) StoreUserInRedis(ctx context.Context, user *users.User) error {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
+	"sync"
 
 	"github.com/IBM/sarama"
 	"github.com/ruziba3vich/hotello-users/genprotos/users"
@@ -12,23 +14,27 @@ import (
 type KafkaConsumer struct {
 	service users.UsersServiceServer
 	logger  *log.Logger
+	wg      *sync.WaitGroup
+	sig     <-chan os.Signal
 }
 
-func NewKafkaConsumer(service users.UsersServiceServer, logger *log.Logger) *KafkaConsumer {
+func NewKafkaConsumer(service users.UsersServiceServer, wg *sync.WaitGroup, sig <-chan os.Signal, logger *log.Logger) *KafkaConsumer {
 	return &KafkaConsumer{
 		service: service,
+		wg:      wg,
+		sig:     sig,
 		logger:  logger,
 	}
 }
 
-func (kc *KafkaConsumer) StartConsumers(brokers []string) {
-	go kc.consumeMessages("user.registration", brokers, kc.handleRegistration)
-	go kc.consumeMessages("user.update.username", brokers, kc.handleUsernameUpdate)
-	go kc.consumeMessages("user.update.password", brokers, kc.handlePasswordUpdate)
-	go kc.consumeMessages("user.delete", brokers, kc.handleUserDelete)
+func (kc *KafkaConsumer) StartConsumers(ctx context.Context, cancel context.CancelFunc, brokers []string) {
+	go kc.consumeMessages(ctx, cancel, "user.registration", brokers, kc.handleRegistration)
+	go kc.consumeMessages(ctx, cancel, "user.update.username", brokers, kc.handleUsernameUpdate)
+	go kc.consumeMessages(ctx, cancel, "user.update.password", brokers, kc.handlePasswordUpdate)
+	go kc.consumeMessages(ctx, cancel, "user.delete", brokers, kc.handleUserDelete)
 }
 
-func (kc *KafkaConsumer) consumeMessages(topic string, brokers []string, handler func(context.Context, *sarama.ConsumerMessage)) {
+func (kc *KafkaConsumer) consumeMessages(ctx context.Context, cancel context.CancelFunc, topic string, brokers []string, handler func(context.Context, *sarama.ConsumerMessage)) {
 	consumer, err := sarama.NewConsumer(brokers, nil)
 	if err != nil {
 		kc.logger.Fatalf("Error creating Kafka consumer: %s", err.Error())
@@ -41,11 +47,25 @@ func (kc *KafkaConsumer) consumeMessages(topic string, brokers []string, handler
 	}
 	defer partitionConsumer.Close()
 
-	ctx := context.Background()
+	go func() {
+		<-kc.sig
+		kc.logger.Println("Received shutdown signal, waiting for current tasks to complete...")
+		cancel()
+		kc.wg.Wait()
+		kc.logger.Println("Shutting down consumer.")
+	}()
 
-	for msg := range partitionConsumer.Messages() {
-		kc.logger.Printf("Received message from topic %s: %s", topic, string(msg.Value))
-		handler(ctx, msg)
+	for {
+		select {
+		case msg := <-partitionConsumer.Messages():
+			kc.wg.Add(1)
+			func(m *sarama.ConsumerMessage) {
+				defer kc.wg.Done()
+				handler(ctx, msg)
+			}(msg)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 

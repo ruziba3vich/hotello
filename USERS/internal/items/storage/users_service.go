@@ -30,11 +30,11 @@ type (
 		logger         *log.Logger
 		tokenGenerator *utils.TokenGenerator
 		pwdHashsher    *utils.PasswordHasher
-		config         config.Config
+		config         *config.Config
 	}
 )
 
-func New(redisService *redisservice.RedisService, database *DB, logger *log.Logger, tokenGenerator *utils.TokenGenerator, pwdHashsher *utils.PasswordHasher, config config.Config) *UsersStorage {
+func New(redisService *redisservice.RedisService, database *DB, logger *log.Logger, tokenGenerator *utils.TokenGenerator, pwdHashsher *utils.PasswordHasher, config *config.Config) *UsersStorage {
 	return &UsersStorage{
 		redisService:   redisService,
 		database:       database,
