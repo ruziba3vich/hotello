@@ -129,7 +129,7 @@ func (s *UsersStorage) GetUserById(ctx context.Context, req *users.GetUserByFiel
 	}
 
 	var mongoUser models.User
-	filter := bson.M{"_id": objectID}
+	filter := bson.M{"_id": objectID, "deleted": false}
 
 	if err := s.database.UsersCollection.FindOne(ctx, filter).Decode(&mongoUser); err != nil {
 		s.logger.Println("Error finding user in MongoDB:", err)
@@ -247,7 +247,7 @@ func (s *UsersStorage) VerifyCodeFromEmail(ctx context.Context, req *users.Verif
 }
 
 func (s *UsersStorage) getUserByField(ctx context.Context, req *users.GetUserByFieldRequest) (*users.User, error) {
-	filter := bson.M{req.FieldName: req.Value}
+	filter := bson.M{req.FieldName: req.Value, "deleted": false}
 
 	var mongoUser models.User
 

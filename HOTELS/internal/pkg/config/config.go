@@ -3,7 +3,6 @@ package config
 import (
 	"log"
 	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -15,11 +14,10 @@ type DbConfig struct {
 }
 
 type Config struct {
-	DbConfig     DbConfig
-	Port         string
-	Protocol     string
-	redisUri     string
-	kafkaBrokers []string
+	DbConfig DbConfig
+	Port     string
+	Protocol string
+	redisUri string
 }
 
 func LoadConfig() (*Config, error) {
@@ -33,17 +31,12 @@ func LoadConfig() (*Config, error) {
 			MongoDB:    os.Getenv("MONGO_DB"),
 			Collection: os.Getenv("MONGO_COLLECTION"),
 		},
-		Port:         os.Getenv("PORT"),
-		Protocol:     os.Getenv("PROTOCOL"),
-		redisUri:     os.Getenv("REDIS_URI"),
-		kafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
+		Port:     os.Getenv("PORT"),
+		Protocol: os.Getenv("PROTOCOL"),
+		redisUri: os.Getenv("REDIS_URI"),
 	}, nil
 }
 
 func (c *Config) GetRedisURI() string {
 	return c.redisUri
-}
-
-func (c *Config) GetKafkaBrokers() []string {
-	return c.kafkaBrokers
 }
