@@ -1,0 +1,48 @@
+services:
+  hotels_service:
+    build: .
+    ports:
+      - "7001:7001"
+    environment:
+      MONGO_URI: mongodb://my_mongo:27017/hotels_service
+      MONGO_DB: hotels_service
+      MONGO_ROOMS_COLLECTION: rooms
+      MONGO_HOTELS_COLLECTION: hotels
+      PORT: localhost:7001
+      PROTOCOL: tcp
+      REDIS_URI: redis://my_redis:6379
+    depends_on:
+      - my_mongo
+      - my_redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  my_mongo:
+    image: mongo:5.0
+    container_name: my_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo my_mongo:27017/hotels_service --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  my_redis:
+    image: redis:7.0
+    container_name: my_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongo_data:

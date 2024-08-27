@@ -8,9 +8,10 @@ import (
 )
 
 type DbConfig struct {
-	MongoURI   string
-	MongoDB    string
-	Collection string
+	MongoURI         string
+	MongoDB          string
+	HotelsCollection string
+	RoomsCollection  string
 }
 
 type Config struct {
@@ -27,9 +28,10 @@ func LoadConfig() (*Config, error) {
 
 	return &Config{
 		DbConfig: DbConfig{
-			MongoURI:   os.Getenv("MONGO_URI"),
-			MongoDB:    os.Getenv("MONGO_DB"),
-			Collection: os.Getenv("MONGO_COLLECTION"),
+			MongoURI:         os.Getenv("MONGO_URI"),
+			MongoDB:          os.Getenv("MONGO_DB"),
+			HotelsCollection: os.Getenv("MONGO_HOTELS_COLLECTION"),
+			RoomsCollection:  os.Getenv("MONGO_ROOMS_COLLECTION"),
 		},
 		Port:     os.Getenv("PORT"),
 		Protocol: os.Getenv("PROTOCOL"),
