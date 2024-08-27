@@ -1,3 +1,6 @@
 [submodule "USERS/users_proto"]
 	path = USERS/users_proto
 	url = https://github.com/ruziba3vich/users_proto.git
+[submodule "HOTELS/hotels_proto"]
+	path = HOTELS/hotels_proto
+	url = https://github.com/ruziba3vich/hotels_proto.git
