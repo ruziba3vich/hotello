@@ -1,0 +1,3 @@
+[submodule "USERS/users_proto"]
+	path = USERS/users_proto
+	url = https://github.com/ruziba3vich/users_proto.git
