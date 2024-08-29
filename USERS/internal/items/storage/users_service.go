@@ -283,17 +283,17 @@ func (s *UsersStorage) updateUserByField(ctx context.Context, req *models.Update
 		update := bson.M{"$set": bson.M{req.FieldName: req.Value}}
 		_, err := s.database.UsersCollection.UpdateOne(sessCtx, filter, update)
 		if err != nil {
-			s.logger.Println("Error updating username in MongoDB:", err)
+			s.logger.Printf("Error updating %s in MongoDB: %s\n", req.FieldName, err)
 			return nil, err
 		}
 
 		if err = s.redisService.StoreUserInRedis(ctx, user); err != nil {
-			s.logger.Println("Error updating username in Redis:", err)
+			s.logger.Printf("Error updating %s in Redis: %s\n", req.FieldName, err)
 			return nil, err
 		}
 
 		return &users.RawResponse{
-			Message: "username has successfully been updated",
+			Message: fmt.Sprintf("%s has successfully been updated", req.FieldName),
 		}, nil
 	}
 

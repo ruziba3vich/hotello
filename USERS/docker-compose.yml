@@ -1,0 +1,88 @@
+services:
+  app:
+    build: .
+    ports:
+      - "7000:7000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/?replicaSet=rs0
+      - MONGO_DB=users_service
+      - MONGO_COLLECTION=users
+      - PORT=7000
+      - PROTOCOL=tcp
+      - SECRET_KEY=prodonik
+      - REDIS_URI=redis:6379
+      - SMTP_PORT=2525
+      - SMTP_HOST=sandbox.smtp.mailtrap.io
+      - SMTP_USER=f3b7be510c8dfb
+      - SMTP_PASS=396b54f1e853c9
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - mongo
+      - redis
+      - kafka
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:7000/health"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  mongo:
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9092
+      KAFKA_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "zkCli.sh", "ls", "/"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+volumes:
+  mongo_data:

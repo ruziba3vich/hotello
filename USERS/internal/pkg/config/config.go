@@ -31,6 +31,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables if set.")
+		return nil, err
 	}
 
 	smtpPort, err := strconv.Atoi(os.Getenv("SMTP_PORT"))

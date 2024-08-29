@@ -9,3 +9,9 @@ hotels-generate-rpc:
            --go-grpc_out=. \
            --proto_path=. \
            protos/hotels_proto/hotel.proto
+
+bookings-generate-rpc:
+	protoc --go_out=. \
+           --go-grpc_out=. \
+           --proto_path=. \
+           protos/booking_proto/booking.proto

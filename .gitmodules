@@ -16,3 +16,6 @@
 [submodule "BOOKING/hotels_proto"]
 	path = BOOKING/hotels_proto
 	url = https://github.com/ruziba3vich/hotels_proto.git
+[submodule "GATEWAY/protos/booking_proto"]
+	path = GATEWAY/protos/booking_proto
+	url = https://github.com/ruziba3vich/booking_proto.git
