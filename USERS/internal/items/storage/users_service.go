@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/k0kubun/pp"
 	"github.com/ruziba3vich/hotello-users/genprotos/users"
 	"github.com/ruziba3vich/hotello-users/internal/items/models"
 	"github.com/ruziba3vich/hotello-users/internal/items/redisservice"
@@ -248,6 +249,7 @@ func (s *UsersStorage) VerifyCodeFromEmail(ctx context.Context, req *users.Verif
 
 func (s *UsersStorage) getUserByField(ctx context.Context, req *users.GetUserByFieldRequest) (*users.User, error) {
 	filter := bson.M{req.FieldName: req.Value, "deleted": false}
+	pp.Println(filter)
 
 	var mongoUser models.User
 

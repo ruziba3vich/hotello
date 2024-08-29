@@ -12,7 +12,7 @@ type (
 		Username string             `bson:"username"`
 		Password string             `bson:"password"`
 		Email    string             `bson:"email"`
-		Deleted  string             `bson:"deleted"`
+		Deleted  bool               `bson:"deleted"`
 	}
 
 	UpdateUserRequest struct {
@@ -52,4 +52,5 @@ func (u *User) FromCreateUserRequest(obj *users.CreateUserRequest) {
 	u.Username = obj.Username
 	u.Password = obj.Password
 	u.Email = obj.Email
+	u.Deleted = false
 }

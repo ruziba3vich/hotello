@@ -54,6 +54,6 @@ func Run(cfg *config.Config, logger *log.Logger) error {
 
 	kafkaconsumer := kafkaconsumer.NewKafkaConsumer(service, &sync.WaitGroup{}, sigChan, logger)
 	kafkaconsumer.StartConsumers(ctx, cancel, cfg.GetKafkaBrokers())
-
+	logger.Printf("Server has started on %s\n", cfg.Port)
 	return server.Serve(listener)
 }

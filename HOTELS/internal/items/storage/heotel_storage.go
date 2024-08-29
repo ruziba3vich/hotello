@@ -109,6 +109,7 @@ func (s *HotelsStorage) CreateRoom(ctx context.Context, req *hotels.CreateRoomRe
 		}
 
 		room.HotelID = hotelID
+		room.ID = primitive.NewObjectID()
 
 		_, err = s.database.RoomsCollection.InsertOne(sessCtx, room)
 		if err != nil {
@@ -342,6 +343,7 @@ func (s *HotelsStorage) SetRoomToUnavailable(ctx context.Context, req *hotels.Se
 		s.logger.Println("Unexpected result from transaction callback")
 		return nil, fmt.Errorf("unexpected result from transaction callback")
 	}
+	room.Available = !room.Available
 
 	return room, nil
 }

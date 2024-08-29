@@ -1,4 +1,4 @@
-FROM golang:1.23.0 AS builder
+FROM golang:1.23.0
 
 WORKDIR /app
 
@@ -8,14 +8,10 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o hotels_service ./cmd/main
-
-FROM gcr.io/distroless/base-debian10
-
-WORKDIR /
-
-COPY --from=builder /app/hotels_service /hotels_service
+WORKDIR /app/cmd
 
 EXPOSE 7001
 
-CMD ["/hotels_service"]
+RUN go build -o main .
+
+CMD ["/app/cmd/main"]
