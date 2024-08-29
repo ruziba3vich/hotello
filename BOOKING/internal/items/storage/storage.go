@@ -2,24 +2,28 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/ruziba3vich/hotello-booking/genprotos/booking"
+	"github.com/ruziba3vich/hotello-booking/genprotos/hotels"
 	"github.com/ruziba3vich/hotello-booking/internal/items/models"
+	"github.com/ruziba3vich/hotello-booking/internal/pkg/config"
 	"github.com/segmentio/kafka-go"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type (
 	Storage struct {
-		database *DB
-		writer   *kafka.Writer
-		logger   *log.Logger
+		database     *DB
+		writer       *kafka.Writer
+		hotelsClient hotels.HotelsServiceClient
+		logger       *log.Logger
 	}
 
 	DB struct {
@@ -29,18 +33,19 @@ type (
 	}
 )
 
-func New(database *DB, writer *kafka.Writer, logger *log.Logger) *Storage {
+func New(database *DB, writer *kafka.Writer, hotelsClient hotels.HotelsServiceClient, logger *log.Logger) *Storage {
 	return &Storage{
-		database: database,
-		writer:   writer,
-		logger:   logger,
+		database:     database,
+		writer:       writer,
+		hotelsClient: hotelsClient,
+		logger:       logger,
 	}
 }
 
 func (s *Storage) GetRoomAvailabilityInInterval(ctx context.Context, req *booking.GetRoomAvailabilityRequest) (*booking.GetRoomAvailabilityResponse, error) {
 	filter := bson.M{
 		"room_id": req.RoomId,
-		"status":  models.CONFIRMED,
+		"status":  string(models.AVAILABLE),
 		"$or": []bson.M{
 			{
 				"$and": []bson.M{
@@ -62,17 +67,9 @@ func (s *Storage) GetRoomAvailabilityInInterval(ctx context.Context, req *bookin
 }
 
 func (s *Storage) BookRoom(ctx context.Context, req *booking.BookRoomRequest) (*booking.RawResponse, error) {
-	fromTime := req.BookFrom.AsTime()
-	tillTime := req.BookTill.AsTime()
+	var bookingOrder models.BookEntity
 
-	bookingOrder := booking.BookEntity{
-		UserId:   req.UserId,
-		RoomId:   req.RoomId,
-		BookFrom: timestamppb.New(fromTime),
-		BookTill: timestamppb.New(tillTime),
-		Status:   string(models.CONFIRMED),
-		MadeAt:   timestamppb.Now(),
-	}
+	bookingOrder.FromBookRoomRequest(req)
 
 	_, err := s.database.BookingsCollection.InsertOne(ctx, &bookingOrder)
 	if err != nil {
@@ -84,10 +81,17 @@ func (s *Storage) BookRoom(ctx context.Context, req *booking.BookRoomRequest) (*
 		return nil, fmt.Errorf("error sending notification: %v", err)
 	}
 
+	if _, err := s.hotelsClient.SetRoomToUnavailableService(ctx, &hotels.SetRoomToUnavailableRequest{
+		RoomId: req.RoomId,
+	}); err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
 	return &booking.RawResponse{Message: "Room booked successfully"}, nil
 }
 
-func (s *Storage) RevokeOrderService(ctx context.Context, req *booking.RevokeOrderRequest) (*booking.RawResponse, error) {
+func (s *Storage) RevokeOrder(ctx context.Context, req *booking.RevokeOrderRequest) (*booking.RawResponse, error) {
 	filter := bson.M{"user_id": req.UserId, "room_id": req.RoomId, "status": "CONFIRMED"}
 
 	bookingOrder := s.database.BookingsCollection.FindOne(ctx, filter)
@@ -105,10 +109,17 @@ func (s *Storage) RevokeOrderService(ctx context.Context, req *booking.RevokeOrd
 		return nil, fmt.Errorf("error sending notification: %v", err)
 	}
 
+	if _, err := s.hotelsClient.SetRoomToAvailableService(ctx, &hotels.SetRoomToAvailableRequest{
+		RoomId: req.RoomId,
+	}); err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
 	return &booking.RawResponse{Message: "Booking revoked successfully"}, nil
 }
 
-func (s *Storage) GetBookingsByUserIdService(ctx context.Context, req *booking.GetBookingsByUserIdRequest) (*booking.GetBookingsByUserIdResponse, error) {
+func (s *Storage) GetBookingsByUserId(ctx context.Context, req *booking.GetBookingsByUserIdRequest) (*booking.GetBookingsByUserIdResponse, error) {
 	filter := bson.M{"user_id": req.UserId}
 
 	findOptions := options.Find()
@@ -129,7 +140,7 @@ func (s *Storage) GetBookingsByUserIdService(ctx context.Context, req *booking.G
 	return &booking.GetBookingsByUserIdResponse{Bookings: bookings}, nil
 }
 
-func (s *Storage) GetNotificationsByUserIdService(ctx context.Context, req *booking.GetNotificationsByUserIdRequest) (*booking.GetNotificationsResponse, error) {
+func (s *Storage) GetNotificationsByUserId(ctx context.Context, req *booking.GetNotificationsByUserIdRequest) (*booking.GetNotificationsResponse, error) {
 	filter := bson.M{"user_id": req.UserId}
 
 	cursor, err := s.database.NotificationsCollection.Find(ctx, filter)
@@ -146,7 +157,7 @@ func (s *Storage) GetNotificationsByUserIdService(ctx context.Context, req *book
 	return &booking.GetNotificationsResponse{Notifications: notifications}, nil
 }
 
-func (s *Storage) GetRoomAvailabilityService(ctx context.Context, req *booking.GetRoomAvailabilityRequest) (*booking.GetRoomAvailabilityResponse, error) {
+func (s *Storage) GetRoomAvailability(ctx context.Context, req *booking.GetRoomAvailabilityRequest) (*booking.GetRoomAvailabilityResponse, error) {
 	fromTime := req.From.AsTime()
 	toTime := req.To.AsTime()
 
@@ -171,14 +182,79 @@ func (s *Storage) GetRoomAvailabilityService(ctx context.Context, req *booking.G
 	return &booking.GetRoomAvailabilityResponse{Available: count == 0}, nil
 }
 
+func (s *Storage) GetBookingById(ctx context.Context, req *booking.GetBookingByIdRequest) (*booking.BookEntity, error) {
+	id, err := primitive.ObjectIDFromHex(req.BookingId)
+	if err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
+	filter := bson.M{
+		"_id": id,
+	}
+
+	var response models.BookEntity
+
+	if err := s.database.BookingsCollection.FindOne(ctx, filter).Decode(&response); err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+	return response.ToProto(), nil
+}
+
+func (s *Storage) CompleteBooking(ctx context.Context, req *booking.CompleteBookingRequest) (*booking.RawResponse, error) {
+	id, err := primitive.ObjectIDFromHex(req.BookingId)
+	if err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+	filter := bson.M{"booking_id": id}
+	update := bson.M{"$set": bson.M{"status": string(models.AVAILABLE)}}
+
+	result, err := s.database.BookingsCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return nil, err
+	}
+	if result.MatchedCount == 0 {
+		return nil, errors.New("no matching booking found")
+	}
+
+	message := fmt.Sprintf("you have successfully completed your booking %s", req.BookingId)
+
+	bookingEnt, err := s.GetBookingById(ctx, &booking.GetBookingByIdRequest{BookingId: req.BookingId})
+	if err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
+	if err := s.sendNotification(ctx, message, bookingEnt.UserId, bookingEnt.RoomId); err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
+	if _, err := s.hotelsClient.SetRoomToAvailableService(ctx, &hotels.SetRoomToAvailableRequest{
+		RoomId: bookingEnt.RoomId,
+	}); err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
+	return &booking.RawResponse{
+		Message: message,
+	}, nil
+}
+
 func (s *Storage) sendNotification(ctx context.Context, message, userId, roomId string) error {
-	notification := booking.Notification{
+	protonotification := booking.Notification{
 		UserId:  userId,
 		RoomId:  roomId,
 		Message: message,
 	}
 
-	msgBytes, err := proto.Marshal(&notification)
+	var notification models.Notification
+	notification.FromProto(&protonotification)
+
+	msgBytes, err := json.Marshal(&notification)
 	if err != nil {
 		return fmt.Errorf("failed to marshal notification: %v", err)
 	}
@@ -194,24 +270,35 @@ func (s *Storage) sendNotification(ctx context.Context, message, userId, roomId 
 		return err
 	}
 
+	if _, err := s.database.NotificationsCollection.InsertOne(ctx, &notification); err != nil {
+		s.logger.Println(err)
+		return err
+	}
+
 	s.logger.Printf("Notification sent for user: %s", userId)
 	return nil
 }
 
 func (s *Storage) GetNotificationById(ctx context.Context, req *booking.GetNotificationByIdRequest) (*booking.Notification, error) {
-	filter := bson.M{"notification_id": req.NotificationId}
+	id, err := primitive.ObjectIDFromHex(req.NotificationId)
+	if err != nil {
+		s.logger.Println(err)
+		return nil, err
+	}
+
+	filter := bson.M{"notification_id": id}
 	update := bson.M{"$set": bson.M{"read": true}}
 
-	notification := &booking.Notification{}
-	err := s.database.NotificationsCollection.FindOneAndUpdate(ctx, filter, update).Decode(notification)
-	if err != nil {
+	var notification models.Notification
+
+	if err := s.database.NotificationsCollection.FindOneAndUpdate(ctx, filter, update).Decode(&notification); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("notification with ID %s not found", req.NotificationId)
 		}
 		return nil, fmt.Errorf("error retrieving notification: %v", err)
 	}
 
-	return notification, nil
+	return notification.ToProto(), nil
 }
 
 /*
@@ -221,3 +308,30 @@ func (s *Storage) GetNotificationById(ctx context.Context, req *booking.GetNotif
    // rpc SendNotification            (Notification)                    returns (google.protobuf.Empty);
    rpc GetNotificationsByUserId    (GetNotificationsByUserIdRequest) returns (GetNotificationsResponse);
 */
+// =======================================================================================================================
+
+func ConnectDB(cfg *config.Config, ctx context.Context) (*DB, error) {
+	clientOptions := options.Client().ApplyURI(cfg.DbConfig.MongoURI)
+
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to MongoDB: %s", err.Error())
+	}
+
+	if err := client.Ping(ctx, nil); err != nil {
+		return nil, fmt.Errorf("failed to ping MongoDB: %s", err.Error())
+	}
+
+	return &DB{
+		Client:                  client,
+		BookingsCollection:      client.Database(cfg.DbConfig.MongoDB).Collection(cfg.DbConfig.BookingsCollection),
+		NotificationsCollection: client.Database(cfg.DbConfig.MongoDB).Collection(cfg.DbConfig.NotificationsCollection),
+	}, nil
+}
+
+func (db *DB) DisconnectDB(ctx context.Context) error {
+	if err := db.Client.Disconnect(ctx); err != nil {
+		return fmt.Errorf("failed to disconnect from MongoDB: %s", err.Error())
+	}
+	return nil
+}

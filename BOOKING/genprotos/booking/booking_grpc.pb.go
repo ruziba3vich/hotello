@@ -25,6 +25,8 @@ const (
 	BookingService_GetNotificationsByUserIdService_FullMethodName = "/BookingService/GetNotificationsByUserIdService"
 	BookingService_GetRoomAvailabilityService_FullMethodName      = "/BookingService/GetRoomAvailabilityService"
 	BookingService_GetNotificationByIdService_FullMethodName      = "/BookingService/GetNotificationByIdService"
+	BookingService_GetBookingByIdService_FullMethodName           = "/BookingService/GetBookingByIdService"
+	BookingService_CompleteBookingService_FullMethodName          = "/BookingService/CompleteBookingService"
 )
 
 // BookingServiceClient is the client API for BookingService service.
@@ -38,6 +40,8 @@ type BookingServiceClient interface {
 	GetNotificationsByUserIdService(ctx context.Context, in *GetNotificationsByUserIdRequest, opts ...grpc.CallOption) (*GetNotificationsResponse, error)
 	GetRoomAvailabilityService(ctx context.Context, in *GetRoomAvailabilityRequest, opts ...grpc.CallOption) (*GetRoomAvailabilityResponse, error)
 	GetNotificationByIdService(ctx context.Context, in *GetNotificationByIdRequest, opts ...grpc.CallOption) (*Notification, error)
+	GetBookingByIdService(ctx context.Context, in *GetBookingByIdRequest, opts ...grpc.CallOption) (*BookEntity, error)
+	CompleteBookingService(ctx context.Context, in *CompleteBookingRequest, opts ...grpc.CallOption) (*RawResponse, error)
 }
 
 type bookingServiceClient struct {
@@ -108,6 +112,26 @@ func (c *bookingServiceClient) GetNotificationByIdService(ctx context.Context, i
 	return out, nil
 }
 
+func (c *bookingServiceClient) GetBookingByIdService(ctx context.Context, in *GetBookingByIdRequest, opts ...grpc.CallOption) (*BookEntity, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BookEntity)
+	err := c.cc.Invoke(ctx, BookingService_GetBookingByIdService_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookingServiceClient) CompleteBookingService(ctx context.Context, in *CompleteBookingRequest, opts ...grpc.CallOption) (*RawResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RawResponse)
+	err := c.cc.Invoke(ctx, BookingService_CompleteBookingService_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BookingServiceServer is the server API for BookingService service.
 // All implementations must embed UnimplementedBookingServiceServer
 // for forward compatibility
@@ -119,6 +143,8 @@ type BookingServiceServer interface {
 	GetNotificationsByUserIdService(context.Context, *GetNotificationsByUserIdRequest) (*GetNotificationsResponse, error)
 	GetRoomAvailabilityService(context.Context, *GetRoomAvailabilityRequest) (*GetRoomAvailabilityResponse, error)
 	GetNotificationByIdService(context.Context, *GetNotificationByIdRequest) (*Notification, error)
+	GetBookingByIdService(context.Context, *GetBookingByIdRequest) (*BookEntity, error)
+	CompleteBookingService(context.Context, *CompleteBookingRequest) (*RawResponse, error)
 	mustEmbedUnimplementedBookingServiceServer()
 }
 
@@ -143,6 +169,12 @@ func (UnimplementedBookingServiceServer) GetRoomAvailabilityService(context.Cont
 }
 func (UnimplementedBookingServiceServer) GetNotificationByIdService(context.Context, *GetNotificationByIdRequest) (*Notification, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotificationByIdService not implemented")
+}
+func (UnimplementedBookingServiceServer) GetBookingByIdService(context.Context, *GetBookingByIdRequest) (*BookEntity, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBookingByIdService not implemented")
+}
+func (UnimplementedBookingServiceServer) CompleteBookingService(context.Context, *CompleteBookingRequest) (*RawResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompleteBookingService not implemented")
 }
 func (UnimplementedBookingServiceServer) mustEmbedUnimplementedBookingServiceServer() {}
 
@@ -265,6 +297,42 @@ func _BookingService_GetNotificationByIdService_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BookingService_GetBookingByIdService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBookingByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).GetBookingByIdService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BookingService_GetBookingByIdService_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).GetBookingByIdService(ctx, req.(*GetBookingByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookingService_CompleteBookingService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteBookingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingServiceServer).CompleteBookingService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BookingService_CompleteBookingService_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingServiceServer).CompleteBookingService(ctx, req.(*CompleteBookingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BookingService_ServiceDesc is the grpc.ServiceDesc for BookingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -295,6 +363,14 @@ var BookingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotificationByIdService",
 			Handler:    _BookingService_GetNotificationByIdService_Handler,
+		},
+		{
+			MethodName: "GetBookingByIdService",
+			Handler:    _BookingService_GetBookingByIdService_Handler,
+		},
+		{
+			MethodName: "CompleteBookingService",
+			Handler:    _BookingService_CompleteBookingService_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
