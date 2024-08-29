@@ -24,7 +24,7 @@ const (
 	BookingService_GetBookingsByUserIdService_FullMethodName      = "/BookingService/GetBookingsByUserIdService"
 	BookingService_GetNotificationsByUserIdService_FullMethodName = "/BookingService/GetNotificationsByUserIdService"
 	BookingService_GetRoomAvailabilityService_FullMethodName      = "/BookingService/GetRoomAvailabilityService"
-	BookingService_GetNotificationById_FullMethodName             = "/BookingService/GetNotificationById"
+	BookingService_GetNotificationByIdService_FullMethodName      = "/BookingService/GetNotificationByIdService"
 )
 
 // BookingServiceClient is the client API for BookingService service.
@@ -37,7 +37,7 @@ type BookingServiceClient interface {
 	// rpc SendNotification            (Notification)                    returns (google.protobuf.Empty);
 	GetNotificationsByUserIdService(ctx context.Context, in *GetNotificationsByUserIdRequest, opts ...grpc.CallOption) (*GetNotificationsResponse, error)
 	GetRoomAvailabilityService(ctx context.Context, in *GetRoomAvailabilityRequest, opts ...grpc.CallOption) (*GetRoomAvailabilityResponse, error)
-	GetNotificationById(ctx context.Context, in *GetNotificationByIdRequest, opts ...grpc.CallOption) (*Notification, error)
+	GetNotificationByIdService(ctx context.Context, in *GetNotificationByIdRequest, opts ...grpc.CallOption) (*Notification, error)
 }
 
 type bookingServiceClient struct {
@@ -98,10 +98,10 @@ func (c *bookingServiceClient) GetRoomAvailabilityService(ctx context.Context, i
 	return out, nil
 }
 
-func (c *bookingServiceClient) GetNotificationById(ctx context.Context, in *GetNotificationByIdRequest, opts ...grpc.CallOption) (*Notification, error) {
+func (c *bookingServiceClient) GetNotificationByIdService(ctx context.Context, in *GetNotificationByIdRequest, opts ...grpc.CallOption) (*Notification, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Notification)
-	err := c.cc.Invoke(ctx, BookingService_GetNotificationById_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, BookingService_GetNotificationByIdService_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ type BookingServiceServer interface {
 	// rpc SendNotification            (Notification)                    returns (google.protobuf.Empty);
 	GetNotificationsByUserIdService(context.Context, *GetNotificationsByUserIdRequest) (*GetNotificationsResponse, error)
 	GetRoomAvailabilityService(context.Context, *GetRoomAvailabilityRequest) (*GetRoomAvailabilityResponse, error)
-	GetNotificationById(context.Context, *GetNotificationByIdRequest) (*Notification, error)
+	GetNotificationByIdService(context.Context, *GetNotificationByIdRequest) (*Notification, error)
 	mustEmbedUnimplementedBookingServiceServer()
 }
 
@@ -141,8 +141,8 @@ func (UnimplementedBookingServiceServer) GetNotificationsByUserIdService(context
 func (UnimplementedBookingServiceServer) GetRoomAvailabilityService(context.Context, *GetRoomAvailabilityRequest) (*GetRoomAvailabilityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRoomAvailabilityService not implemented")
 }
-func (UnimplementedBookingServiceServer) GetNotificationById(context.Context, *GetNotificationByIdRequest) (*Notification, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetNotificationById not implemented")
+func (UnimplementedBookingServiceServer) GetNotificationByIdService(context.Context, *GetNotificationByIdRequest) (*Notification, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNotificationByIdService not implemented")
 }
 func (UnimplementedBookingServiceServer) mustEmbedUnimplementedBookingServiceServer() {}
 
@@ -247,20 +247,20 @@ func _BookingService_GetRoomAvailabilityService_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BookingService_GetNotificationById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BookingService_GetNotificationByIdService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetNotificationByIdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BookingServiceServer).GetNotificationById(ctx, in)
+		return srv.(BookingServiceServer).GetNotificationByIdService(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: BookingService_GetNotificationById_FullMethodName,
+		FullMethod: BookingService_GetNotificationByIdService_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BookingServiceServer).GetNotificationById(ctx, req.(*GetNotificationByIdRequest))
+		return srv.(BookingServiceServer).GetNotificationByIdService(ctx, req.(*GetNotificationByIdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -293,8 +293,8 @@ var BookingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BookingService_GetRoomAvailabilityService_Handler,
 		},
 		{
-			MethodName: "GetNotificationById",
-			Handler:    _BookingService_GetNotificationById_Handler,
+			MethodName: "GetNotificationByIdService",
+			Handler:    _BookingService_GetNotificationByIdService_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

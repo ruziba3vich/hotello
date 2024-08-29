@@ -198,6 +198,22 @@ func (s *Storage) sendNotification(ctx context.Context, message, userId, roomId 
 	return nil
 }
 
+func (s *Storage) GetNotificationById(ctx context.Context, req *booking.GetNotificationByIdRequest) (*booking.Notification, error) {
+	filter := bson.M{"notification_id": req.NotificationId}
+	update := bson.M{"$set": bson.M{"read": true}}
+
+	notification := &booking.Notification{}
+	err := s.database.NotificationsCollection.FindOneAndUpdate(ctx, filter, update).Decode(notification)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("notification with ID %s not found", req.NotificationId)
+		}
+		return nil, fmt.Errorf("error retrieving notification: %v", err)
+	}
+
+	return notification, nil
+}
+
 /*
    rpc BookRoom                    (BookRoomRequest)                 returns (RawResponse);
    rpc RevokeOrder                 (RevokeOrderRequest)              returns (RawResponse);
